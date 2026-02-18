@@ -7,71 +7,74 @@ Mide tiempos promediados usando time.perf_counter()
 
 import time
 
+# Tamaños de lista que vamos a probar
+tamaños = [1000, 10000, 100000]
+
+# Número de repeticiones para cada tamaño (para que el tiempo total sea manejable)
+repeticiones = {
+    1000: 10000,   # 10.000 repeticiones para listas pequeñas
+    10000: 1000,   # 1.000 repeticiones para listas medianas
+    100000: 100    # 100 repeticiones para listas grandes
+}
 
 def busqueda_lineal(lista, objetivo):
-    for i, v in enumerate(lista):
-        if v == objetivo:
-            return i
-    return -1
-
+    """Busca objetivo en lista ordenada recorriendo elemento por elemento."""
+    for elemento in lista:
+        if elemento == objetivo:
+            return True
+        # Como la lista está ordenada, si encontramos un elemento mayor que el objetivo,
+        # podemos detenernos porque el objetivo no estará más adelante.
+        if elemento > objetivo:
+            return False
+    return False  # No se encontró
 
 def busqueda_binaria(lista, objetivo):
-    izq = 0
-    der = len(lista) - 1
-    while izq <= der:
-        mid = (izq + der) // 2
-        if lista[mid] == objetivo:
-            return mid
-        elif lista[mid] < objetivo:
-            izq = mid + 1
+    """Busca objetivo en lista ordenada dividiendo el espacio de búsqueda a la mitad."""
+    izquierda = 0
+    derecha = len(lista) - 1
+    while izquierda <= derecha:
+        medio = (izquierda + derecha) // 2
+        if lista[medio] == objetivo:
+            return True
+        elif lista[medio] < objetivo:
+            izquierda = medio + 1
         else:
-            der = mid - 1
-    return -1
+            derecha = medio - 1
+    return False
 
+# Guardaremos los resultados aquí
+resultados = []
 
-def medir(func, lista, objetivo, repeticiones):
-    start = time.perf_counter()
-    for _ in range(repeticiones):
-        func(lista, objetivo)
-    end = time.perf_counter()
-    total = end - start
-    promedio = total / repeticiones
-    return promedio * 1000.0  # ms por ejecución
+for n in tamaños:
+    # Creamos una lista ordenada de 0 a n-1
+    lista = list(range(n))
+    # Elegimos un objetivo que NO está en la lista (n es mayor que todos)
+    objetivo = n
 
+    print(f"Probando con lista de {n} elementos...")
 
-def main():
-    tamanios = [1_000, 10_000, 100_000]
-    escenarios = [
-        ("al_final", lambda n: n - 1),
-        ("no_existe", lambda n: n)
-    ]
+    # --- Medición de búsqueda lineal ---
+    inicio = time.perf_counter()               # Tiempo inicial
+    for _ in range(repeticiones[n]):           # Repetimos muchas veces
+        busqueda_lineal(lista, objetivo)
+    fin = time.perf_counter()                   # Tiempo final
+    tiempo_lineal = (fin - inicio) / repeticiones[n]   # Tiempo promedio por búsqueda
 
-    print("Comparativa búsqueda lineal vs binaria (tiempo promedio por búsqueda en ms)")
-    print("-" * 80)
+    # --- Medición de búsqueda binaria ---
+    inicio = time.perf_counter()
+    for _ in range(repeticiones[n]):
+        busqueda_binaria(lista, objetivo)
+    fin = time.perf_counter()
+    tiempo_binaria = (fin - inicio) / repeticiones[n]
 
-    for escenario_nombre, objetivo_fn in escenarios:
-        print(f"Escenario: {escenario_nombre}")
-        print(f"{'n':>10} | {'Lineal (ms)':>15} | {'Binaria (ms)':>15} | {'Repeticiones':>12}")
-        print('-' * 80)
+    # Guardamos
+    resultados.append((n, tiempo_lineal, tiempo_binaria))
 
-        for n in tamanios:
-            lista = list(range(n))
-            objetivo = objetivo_fn(n)
-
-            # ajustar repeticiones para que el tiempo total sea razonable
-            repeticiones = max(10, int(1_000_000 / n))
-
-            t_lineal = medir(busqueda_lineal, lista, objetivo, repeticiones)
-            t_binaria = medir(busqueda_binaria, lista, objetivo, repeticiones)
-
-            print(f"{n:10} | {t_lineal:15.6f} | {t_binaria:15.6f} | {repeticiones:12}")
-
-        print('\n')
-
-    # Conclusión breve
-    print("Conclusión: Búsqueda binaria es mucho más eficiente para listas ordenadas")
-    print("porque su complejidad es O(log n) frente a O(n) de la lineal.")
-
-
-if __name__ == '__main__':
-    main()
+# Mostramos la tabla comparativa
+print("\n" + "="*60)
+print("Tamaño   Tiempo Lineal (seg)   Tiempo Binario (seg)   Mejora (veces)")
+print("="*60)
+for n, tlin, tbin in resultados:
+    mejora = tlin / tbin
+    print(f"{n:<8} {tlin:.3e}           {tbin:.3e}           {mejora:.2f}")
+print("="*60)
